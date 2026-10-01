@@ -177,3 +177,120 @@ sig_max <- SQres/t1_sig
 IC_sigma2 <- cbind(sig_min, sig_max)
 cat('Intervalo de confiança (95%) para σ²')
 print(IC_sigma2)
+
+# Cálculo do intervalo de confiança para esperança de Y
+x1 <- X 
+X0 <- Xbar
+
+v_medio <- beta0_hat + beta1_hat*X0
+dp_v_medio <- sqrt(sigma2_hat*(1/n + (X0 - mean(x1))^2/Sxx ))
+
+v_medio_min <- v_medio - t2*dp_v_medio
+v_medio_max <- v_medio - t1*dp_v_medio
+
+IC_v_medio <- cbind(v_medio_min, v_medio_max)
+print(IC_v_medio)
+
+# Gráfico com intervalo de confiança para esperança de Y
+x_seq <- seq(min(x1), max(x1), length.out = 100)
+vs <- beta0_hat + beta1_hat*x_seq
+dps <- sqrt(sigma2_hat*(1/n + (x_seq - mean(x1))^2/Sxx ))
+vs_min <- vs - t2*dps
+vs_max <- vs - t1*dps
+
+plot(x1,
+     y = Y,
+     main = bquote("Intervalo de confiança para E(X|Y)"),
+     xlab = "Fluxo de ar", ylab = "Perda")
+curve(beta0_hat + beta1_hat*x, add = T, col = 'red')
+lines(x_seq, vs_min, col = "red", lty = 2)
+lines(x_seq, vs_max, col = "red", lty = 2)
+
+# Cálculo do intervalo de predição para uma nova observação
+x1_new <- 4.5
+Y0_hat <- beta0_hat + beta1_hat*x1_new
+
+dp_Y0_hat <- sqrt(sigma2_hat*(1 + 1/n + (x1_new - mean(x1))^2/Sxx ))
+
+Y0_hat_min <- Y0_hat - t2*dp_Y0_hat
+Y0_hat_max <- Y0_hat - t1*dp_Y0_hat
+
+IC_Y0_hat <- cbind(Y0_hat_min, Y0_hat_max)
+print(IC_Y0_hat)
+
+# Gráfico com intervalo de predição para Y0
+dps_ <- sqrt(sigma2_hat*(1 + 1/n + (x_seq - mean(x1))^2/Sxx ))
+vs_min_ <- vs - t2*dps_
+vs_max_ <- vs - t1*dps_
+
+plot(x1,
+     y = Y,
+     main = bquote("Intervalo de predição para " ~ hat(Y)[0]),
+     xlab = "Fluxo de ar", ylab = "Perda")
+curve(beta0_hat + beta1_hat*x, add = T, col = 'red')
+lines(x_seq, vs_min_, col = "red", lty = 2)
+lines(x_seq, vs_max_, col = "red", lty = 2)
+
+# Análise de variância (ANOVA manual)
+SQreg <- beta1_hat*Sxy
+SQtot <- Syy
+
+SQreg
+SQres
+SQtot
+
+QMreg = SQreg/1
+QMres = SQres/(n-2)
+F0 <- QMreg/QMres 
+
+f1 <- pf(F0, df1 = 1, df2 = n-2, lower.tail = F)
+
+if(F0 > f1){
+  cat("Rejeita-se H0\n")
+}
+
+##### Ajuste do mesmo modelo de regressão linear simples usando a função lm #####
+fit_lm <- lm(Y ~ X)
+summary(fit_lm)
+
+plot(x1,
+     y = Y,
+     main = bquote("Intervalo de predição para " ~ hat(Y)[0]),
+     xlab = "Fluxo de ar", ylab = "Perda na chaminé")
+curve(round(fit_lm$coef[[1]],4) + round(fit_lm$coef[[2]],4)*x, add = T, col = 'red')
+
+# Coeficientes estimados
+fit_lm$coefficients
+
+# Valores preditos pelo modelo 
+y_fitted <- fit_lm$fitted.values
+
+# Comparação
+cbind(y_fitted, y_hat)
+
+# Residuos
+residuos_lm <- fit_lm$residuals
+
+# Comparação
+cbind(residuos_lm, residuos)
+
+# Intervalos de confiança para beta0 e beta1
+confint(fit_lm, level = 1-alpha)
+
+# Intervalos de confiança para a resposta média
+predict(fit_lm, interval="confidence")
+
+# Análise de variância via R
+anova(fit_lm)
+
+# Valores extraídos da tabela ANOVA
+SQreg_lm <- anova(fit_lm)[1,2]
+SQres_lm <- anova(fit_lm)[2,2]
+QMreg_lm <- anova(fit_lm)[1,3]
+QMres_lm <- anova(fit_lm)[2,3]
+F_stat_lm <- anova(fit_lm)[,4]
+
+cat("SQreg (lm):", SQreg_lm, "\n")
+cat("SQres (lm):", SQres_lm, "\n")
+cat("Estatística F:", F_stat_lm[1], "\n")
+
